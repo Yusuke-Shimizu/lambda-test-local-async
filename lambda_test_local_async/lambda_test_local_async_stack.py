@@ -8,6 +8,7 @@ from aws_cdk import core
 import aws_cdk.aws_lambda as lambda_
 from aws_cdk.aws_lambda_python import PythonFunction
 from aws_cdk.aws_apigateway import LambdaIntegration, RestApi
+import aws_cdk.aws_sqs as sqs
 
 
 class LambdaTestLocalAsyncStack(cdk.Stack):
@@ -20,8 +21,18 @@ class LambdaTestLocalAsyncStack(cdk.Stack):
             entry="src", # required
             index="sync.py", # optional, defaults to 'index.py'
             handler="handler", # optional, defaults to 'handler'
-            runtime=lambda_.Runtime.PYTHON_3_7
+            runtime=lambda_.Runtime.PYTHON_3_7,
+            tracing=lambda_.Tracing.ACTIVE
         )
 
         api = RestApi(self, "api")
-        api.root.add_method("GET", LambdaIntegration(lambda_function))
+        api.root.add_method("POST", LambdaIntegration(lambda_function))
+        
+        queue = sqs.Queue(self, "Queue")
+        queue.grant_send_messages(lambda_function)
+        
+        core.CfnOutput(self,
+            "output-queue",
+            value=queue.queue_url,
+        )
+
